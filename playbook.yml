@@ -1,0 +1,44 @@
+- hosts: all
+  become: true
+  
+  tasks:
+    - name: Install depedencies
+      apt: name=apt-transport-https state=latest update_cache=yes
+      loop: ['ca-certificates', 'curl', 'gnupg', 'lsb-release']
+
+    - name: setup docker repo key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: setup docker repo
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu bionic stable
+        state: present
+    
+    - name: install docker
+      apt: name=docker-ce state=latest update_cache=yes
+
+    - name: copy Dockerfile
+      copy:
+        src: ./Dockerfile
+        dest: /root/webmin-docker-ansible/Dockerfile
+        owner: root
+        group: root
+        mode: '0644'
+    - name: build webmin docker image
+      docker_image:
+        name: webmindockeransible:v1.0
+        build:
+          path: /root/webmin-docker-ansible
+          source: build
+          args:
+            listen_port: 10000
+        source: build
+        state: present
+    - name: run webmin docker image
+      docker_container:
+        name: webmindockeransible_container
+        image: webmindockeransible:latest
+        detach: yes
+        state: present
